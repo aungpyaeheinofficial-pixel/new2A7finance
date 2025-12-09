@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { ChatGroq } from '@langchain/groq';
 import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
@@ -100,6 +101,7 @@ export async function POST(req: NextRequest) {
       // --- GROQ PATH (Speed / Llama 3.3) ---
       providerName = 'Groq (Llama 3.3)';
       
+      // Fix: Use 'model' for ChatGroq as 'modelName' property does not exist on ChatGroqInput in this version
       const model = new ChatGroq({
         apiKey: process.env.GROQ_API_KEY,
         model: "llama-3.3-70b-versatile",

@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { ChatGroq } from '@langchain/groq';
 import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
@@ -6,19 +5,25 @@ import { SupabaseVectorStore } from '@langchain/community/vectorstores/supabase'
 import { createClient } from '@supabase/supabase-js';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 
-export const runtime = 'edge'; // Optional: Use edge runtime for speed if supported by deps
+// Use Edge Runtime for lower latency
+export const runtime = 'edge';
 
 export async function POST(req: NextRequest) {
   try {
     const { message, history, useComplexModel, image } = await req.json();
 
-    // 1. Initialize Supabase for RAG
+    // 1. Initialize Supabase Client
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_PRIVATE_KEY) {
+      throw new Error("Missing Supabase credentials");
+    }
+    
     const client = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_PRIVATE_KEY!
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_PRIVATE_KEY
     );
 
     // 2. Initialize Embeddings (Gemini text-embedding-004)
+    // We use this to convert the user's query into a vector for searching
     const embeddings = new GoogleGenerativeAIEmbeddings({
       modelName: "text-embedding-004",
       apiKey: process.env.GOOGLE_API_KEY,
@@ -31,12 +36,16 @@ export async function POST(req: NextRequest) {
       queryName: 'match_documents',
     });
 
-    // 3. Retrieve Context (RAG)
-    // We search for context based on the user's latest message
-    const searchResults = await vectorStore.similaritySearch(message, 3);
-    const contextText = searchResults.map(doc => doc.pageContent).join('\n\n');
-
-    console.log(`[RAG] Retrieved ${searchResults.length} docs for query: "${message}"`);
+    // 3. RAG: Retrieve Context
+    // Search for the 3 most relevant documents
+    let contextText = "";
+    try {
+      const searchResults = await vectorStore.similaritySearch(message, 3);
+      contextText = searchResults.map(doc => doc.pageContent).join('\n\n');
+      console.log(`[RAG] Retrieved ${searchResults.length} docs`);
+    } catch (e) {
+      console.warn("[RAG] Retrieval failed, proceeding without context:", e);
+    }
 
     // 4. Construct System Prompt
     const systemInstruction = `You are a Senior Financial Analyst for the Myanmar market.
@@ -47,29 +56,32 @@ export async function POST(req: NextRequest) {
     ${contextText}
     `;
 
-    // 5. Route Request
+    // 5. Smart Routing Logic
+    // If Image is present OR Deep Think mode is enabled -> Use Gemini 2.5
+    // Otherwise -> Use Groq (Llama 3.3) for speed
+    
     let responseText = '';
     let providerName = '';
 
     if (image || useComplexModel) {
       // --- GEMINI PATH (Vision / Deep Reasoning) ---
       providerName = 'Gemini 2.5 Flash';
+      
       const model = new ChatGoogleGenerativeAI({
-        modelName: "gemini-2.5-flash",
+        modelName: "gemini-2.5-flash", // Updated to latest stable flash model
         apiKey: process.env.GOOGLE_API_KEY,
-        temperature: 0.3, // Lower temp for analysis
-        maxOutputTokens: 2048,
+        temperature: 0.3, // Analytical
+        maxOutputTokens: 4096,
       });
 
       // Construct Multimodal Message
       const contentParts: any[] = [{ type: 'text', text: message }];
       
       if (image) {
-        // Ensure strictly base64 data without prefixes if SDK expects it, 
-        // or format as data URL. LangChain/Google integration handles data URLs.
+        // LangChain accepts data URLs directly in image_url
         contentParts.push({
           type: 'image_url',
-          image_url: image, // Assumes data:image/jpeg;base64,... format
+          image_url: image, 
         });
       }
 
@@ -85,6 +97,7 @@ export async function POST(req: NextRequest) {
     } else {
       // --- GROQ PATH (Speed / Llama 3.3) ---
       providerName = 'Groq (Llama 3.3)';
+      
       const model = new ChatGroq({
         apiKey: process.env.GROQ_API_KEY,
         model: "llama-3.3-70b-versatile",
@@ -109,7 +122,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("Hybrid AI Backend Error:", error);
     return NextResponse.json(
-      { text: "Error connecting to AI backend.", provider: 'System' },
+      { text: `System Error: ${error.message}`, provider: 'System' },
       { status: 500 }
     );
   }

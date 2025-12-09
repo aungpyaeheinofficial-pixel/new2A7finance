@@ -1,0 +1,5 @@
+{
+  "name": "Myanmar Finance Hybrid AI",
+  "description": "A hybrid AI platform using Groq (Llama 3.3) for speed and Gemini 2.5 Flash for complex analysis and vision tasks, specifically tailored for the Myanmar financial market.",
+  "requestFramePermissions": []
+}

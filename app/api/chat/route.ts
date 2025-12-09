@@ -70,8 +70,7 @@ export async function POST(req: NextRequest) {
       providerName = 'Gemini 2.5 Flash';
       
       const model = new ChatGoogleGenerativeAI({
-        // Fix: Use 'model' instead of 'modelName' which is not in GoogleGenerativeAIChatInput
-        model: "gemini-2.5-flash", // Updated to latest stable flash model
+        modelName: "gemini-2.5-flash", // Fixed: 'model' -> 'modelName' for @langchain/google-genai ^0.0.12
         apiKey: process.env.GOOGLE_API_KEY,
         temperature: 0.3, // Analytical
         maxOutputTokens: 4096,
@@ -101,10 +100,9 @@ export async function POST(req: NextRequest) {
       // --- GROQ PATH (Speed / Llama 3.3) ---
       providerName = 'Groq (Llama 3.3)';
       
-      // Fix: Use 'model' for ChatGroq as 'modelName' property does not exist on ChatGroqInput in this version
       const model = new ChatGroq({
         apiKey: process.env.GROQ_API_KEY,
-        model: "llama-3.3-70b-versatile",
+        modelName: "llama-3.3-70b-versatile", // Fixed: 'model' -> 'modelName' for @langchain/groq ^0.0.6
         temperature: 0.5,
       });
 

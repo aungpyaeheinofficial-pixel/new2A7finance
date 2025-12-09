@@ -8,7 +8,7 @@ import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { Document } from '@langchain/core/documents';
 
 // 1. Configuration
-const DATA_FILE_PATH = path.join(process.cwd(), 'data', 'finance_data.txt');
+const DATA_FILE_PATH = path.join((process as any).cwd(), 'data', 'finance_data.txt');
 const SUPABASE_TABLE = 'documents';
 
 const runIngestion = async () => {
@@ -63,7 +63,7 @@ const runIngestion = async () => {
       const doc = docs[i];
       const progress = Math.round(((i + 1) / docs.length) * 100);
       
-      process.stdout.write(`\r⏳ Processing chunk ${i + 1}/${docs.length} (${progress}%)`);
+      (process as any).stdout.write(`\r⏳ Processing chunk ${i + 1}/${docs.length} (${progress}%)`);
 
       try {
         // We use addDocuments to generate embedding and save to DB

@@ -28,7 +28,8 @@ const runIngestion = async () => {
   const embeddings = new GoogleGenerativeAIEmbeddings({
     modelName: "text-embedding-004", // Generates 768-dimensional vectors
     apiKey: process.env.GOOGLE_API_KEY,
-    taskType: "RETRIEVAL_DOCUMENT",
+    // Fix: Cast string to any to avoid strict Enum type mismatch for TaskType in LangChain
+    taskType: "RETRIEVAL_DOCUMENT" as any,
   });
 
   // 4. Load Data

@@ -27,7 +27,8 @@ export async function POST(req: NextRequest) {
     const embeddings = new GoogleGenerativeAIEmbeddings({
       modelName: "text-embedding-004",
       apiKey: process.env.GOOGLE_API_KEY,
-      taskType: "RETRIEVAL_DOCUMENT",
+      // Fix: Cast string to any to avoid strict Enum type mismatch for TaskType
+      taskType: "RETRIEVAL_DOCUMENT" as any,
     });
 
     const vectorStore = new SupabaseVectorStore(embeddings, {
@@ -68,7 +69,8 @@ export async function POST(req: NextRequest) {
       providerName = 'Gemini 2.5 Flash';
       
       const model = new ChatGoogleGenerativeAI({
-        modelName: "gemini-2.5-flash", // Updated to latest stable flash model
+        // Fix: Use 'model' instead of 'modelName' which is not in GoogleGenerativeAIChatInput
+        model: "gemini-2.5-flash", // Updated to latest stable flash model
         apiKey: process.env.GOOGLE_API_KEY,
         temperature: 0.3, // Analytical
         maxOutputTokens: 4096,
